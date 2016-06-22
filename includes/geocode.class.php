@@ -1,6 +1,16 @@
 <?php
 include_once 'preheader.php';
-$file = file('fail2banIPs.txt');
+$file = file('../fail2banIPs.txt');
+if(isset($_POST['API']) &&  $_POST['API'] === 'true'){
+$geo = new geoCode();
+$geo->getLatLng($file);
+$geo->jsonMarkers();
+}
+
+if($_POST['categories'] === 'true'){
+$cat = new geoCode();
+$cat->getServices();
+}
 
 class geoCode {
 	
@@ -13,6 +23,7 @@ class geoCode {
 	var $service = '';
 	var $msg = '';
 	var $maxfileage = '120'; // minutes
+	var $jsonItems = array();
 	
 	var $jsonfile = "markers.json";
 
@@ -47,7 +58,7 @@ class geoCode {
 	}
 
 	function whereIS($loc) {
-		$url = "http://maps.googleapis.com/maps/api/geocode/json?address=".$loc."&sensor=false";
+		$url = "http://maps.googleapis.com/maps/api/geocode/json?address=".$loc;
 		//var_dump($url);
 		return $url;
 	}
@@ -88,44 +99,102 @@ class geoCode {
 	
 	function fileage($file){
 		$age = (time() - (filemtime($file)))/60;
-		if($age < $this->maxfileage) return true;
-		else return false;
+
+		if($age < $this->maxfileage){
+			return false;
+		}else{
+			return true;
+		}
 	}
 
 	function progressBar($percent,$i,$lines) {
+/*	
 		// Javascript for updating the progress bar and information
 		$count = count($lines);
-			echo '<script language="javascript">
-			document.getElementById("progress").innerHTML="<div style=\"width:'.$percent.';background-color:#ddd;\">&nbsp;</div>";
-			document.getElementById("information").innerHTML="Processing '.$i.' from '.$count.' IP\'s.";
-			</script>';
+			echo '<script language="javascript">';
+			echo 'document.getElementById("progress").innerHTML="<div style=\"width:'.$percent.';background-color:#ddd;\">&nbsp;</div>';
+			echo 'document.getElementById("information").innerHTML="Processing '.$i.' from '.$count.' IP\'s.';
+			echo '</script>';
 			flush();
-		if(!empty($this->msg)) echo $this->msg;
-		else echo '<li class="listitem" data-value="'.$this->id.'">'.$this->ip.' Lat:'.$this->lat.' Lng:'.$this->lng.' '.str_replace('+',' ',$this->country).'</li>'; 
-		//echo $this->ip.' Lat: <tab indent=2em>' . $this->lat . ' Long: ' . $this->lng . ' '.str_replace('+',' ',$this->country).'<br>';
+		if(!empty($this->msg))
+		{
+		}else{ echo '<li class="listitem" data-value="'.$this->id.'">'.$this->ip.' Lat:'.$this->lat.' Lng:'.$this->lng.' '.str_replace('+',' ',$this->country).'</li>'; 
+		echo $this->ip.' Lat: <tab indent=2em>' . $this->lat . ' Long: ' . $this->lng . ' '.str_replace('+',' ',$this->country).'<br>';
 		echo str_repeat(' ',1024*64);
 		if ($percent = '100'){
 		echo '<script language="javascript">document.getElementById("information").innerHTML="Process completed"</script>';
 		}
+		}
+*/
+	}
+	
+	function jsonMarkers(){
+//$results = q("SELECT ip.ipID, ip.ipv4, logs.sID, logs.lat, logs.lng, logs.added, services.name FROM ip LEFT JOIN logs ON ip.ipID = logs.ipID LEFT JOIN services ON services.sID = logs.sID");
+//$results = q("SELECT ip.ipID, ip.ipv4, services.name FROM ip LEFT JOIN services ON services.sID = ip.sid");
+//$results = q("SELECT ip.ipID, ip.ipv4, logs.sID, logs.lat, logs.lng, logs.added, services.name FROM ip LEFT JOIN logs ON ip.ipID = logs.ipID LEFT JOIN services ON logs.sID = services.sID");
 
+$results = q("SELECT logs.logID, ip.ipID, ip.ipv4, logs.sID, logs.lat, logs.lng, logs.added, services.name FROM ip LEFT JOIN logs ON ip.ipID = logs.ipID LEFT JOIN services ON logs.sID = services.sID");
+
+$array = array();
+foreach($results as $k => $v){
+//var_dump($v);
+$array['markers'][] = array('id' => $v['logID'], 'ip' => $v['ipv4'], 'lat' => addslashes($v['lat']), 'long' => addslashes($v['lng']), 'service' => $v['name'], 'created' => $v['added']);
+}
+//var_dump($array);
+//print json_encode($array);		
+		/*
+		$results = q("SELECT * FROM logs");
+		header("Content-type: text/xml");
+
+		$node = $dom->createElement("marker");
+		  
+		foreach($results as $row){
+			$newnode = $parnode->appendChild($node);
+			$newnode->setAttribute("name",$row['country']);
+		  	$newnode->setAttribute("address", '');
+		  	$newnode->setAttribute("lat", $row['lat']);
+		  	$newnode->setAttribute("lng", $row['lng']);
+		  	$newnode->setAttribute("type", '');
+		}
+
+		$dom->saveXML();
+		*/
+		
+print json_encode($array);
+return false;
+	}
+	
+	function getServices(){
+		$results = q("SELECT sID,name FROM services");
+		$list .= "<ul>";
+		//$list .= "<li><input type='checkbox' id='allservices'>Alle Dienste</li>";
+		foreach($results as $row){
+		$c = qr("SELECT COUNT(sID) as count FROM logs WHERE sID = '".$row['sID']."'");
+		$rpl = array('[',']');
+		$row['name'] = str_replace($rpl,"",$row['name']);
+			$list .= '<li><input type="checkbox" id="'.$row['name'].'" onclick=boxclick(this,"'.$row['name'].'")>'.$row['name'].' ('.$c['count'].')</li>';
+		}
+		$list .= '</ul>';
+		echo $list;
 	}
 	
 	public function getLatLng($lines) {
 		// Check file age
-		if($this->fileage($this->jsonfile)){
+		//var_dump($this->fileage($this->jsonfile));
+		if($this->fileage($this->jsonfile) === true){
+//var_dump($this->fileage($this->jsonfile));
 		$date = date('Y-m-d H:i:s');
 		$count = count($lines);
 		$ar = array('[',']','\\','+','/','#','è','é');
 		$i = '1';
 		$jsontext = "{\"markers\":[";
 		$jsonitems = array();
-		
+
 		foreach ($lines as $line_num => $line) {
 			if ($i<=$count){
 				$percent = intval($i/$count * 100)."%";
 				$ip = $this->findIp($line);
 				$loc = $this->whoIS($ip);
-				
 				if($loc !== false){
 					if(!empty($this->address)){
 						$url = $this->whereIS($this->address);
@@ -144,6 +213,7 @@ class geoCode {
 					$this->id = uniqid();
 					$jsonitems[$i] = "{\"id\": \"".$this->id."\", \"lat\":  \"".addslashes($this->lat)."\", \"long\":  \"".addslashes($this->lng)."\",\"ip\":\"".$ip."\",\"service\":\"".addslashes($service)."\", \"created\":\"".addslashes($this->adate)."\"},";
 					$jsontext .= $jsonitems[$i];
+					$this->jsonItems[$i];
 				
 				}
 				
@@ -186,6 +256,8 @@ class geoCode {
 						"lat = '".$this->lat."'," .
 						"lng = '".$this->lng."'," .
 						"added = NOW()");
+						
+				//var_dump($insertlog);
 				$i++;
 				$this->progressBar($percent,$i,$lines);
 				
@@ -195,7 +267,7 @@ class geoCode {
 		$jsontext = substr_replace($jsontext, '', -1); // to get rid of extra comma
 		$jsontext .= "]}";
 		$output = $jsontext;
-		$this->write($this->jsonfile,$output);
+		if($count != 0)	$this->write($this->jsonfile,$output);
 		}else{
 		$this->msg = 'Please klick on list item';
 		$this->progressBar(100,0,$lines);
@@ -206,7 +278,7 @@ class geoCode {
 				$list .= '<li data-value="'.$marker['id'].'">'.$marker['ip'].' Lat:'.$marker['lat'].' Lng:'.$marker['long'].'</li>';
 			}
 			$list .= '</ul>';
-			echo $list;
+			//echo $list;
 		}
 	} // end getLatLng
 } // End geoCode 

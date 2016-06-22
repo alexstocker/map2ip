@@ -1,5 +1,5 @@
+<?php require_once('includes/geocode.class.php'); ?>
 <!DOCTYPE html>
-
 <html>
 <head>
 <title>mapIP</title>
@@ -7,29 +7,30 @@
 <link rel="stylesheet" type="text/css" href="css/style.css">
 
 <!-- Include jQuery lib for AJAX requests --> 
-<script type="text/javascript" src="http://code.jquery.com/jquery-1.4.2.min.js"></script> 
- 
+ <link rel="stylesheet" href="http://code.jquery.com/mobile/1.4.5/jquery.mobile-1.4.5.min.css" />
+<link rel="stylesheet" href="//code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css">
+  <script src="//code.jquery.com/jquery-1.10.2.js"></script>
+  <script src="//code.jquery.com/ui/1.11.4/jquery-ui.js"></script>
 <!-- Include google map lib --> 
-<script type="text/javascript" src="http://maps.google.com/maps/api/js?key=AIzaSyBNvxH37pg_ivNSpanbOYsZD2rgF3iXRX4&sensor=false"></script> 
+<script type="text/javascript" src="http://maps.google.com/maps/api/js?key=AIzaSyBNvxH37pg_ivNSpanbOYsZD2rgF3iXRX4"></script> 
 
-<script type="text/javascript" src="js/maps.js"></script> 
-<script type="text/javascript" src="js/dragme.js"></script> 
+<script type="text/javascript" src="js/maps2.js"></script>  
 </head>
 <body onload="loadMap()">
-	<div id="gitlink">
-		<a href="https://gitorious.org/mapip"><img src="blank.gif"
-			width="125px" height="130px"> </a>
-	</div>
  <div id="myMap"></div>
-<div class="markers" id="dragme" draggable="true">
-<div id="progress" style="width:99%;border:1px solid #ccc;"></div>
-<div id="information" style="width"></div>
-<?php
-require_once('includes/geocode.class.php');
-$geo = new geoCode();
-$geo->getLatLng($file);
-?>
-</div>
-<script type="text/javascript" src="js/dragme.js"></script>
+<!--
+<p>
+  <label for="amount">Zeitleiste</label>
+  <input type="text" id="amount" readonly style="border:0; color:#f6931f; font-weight:bold;">
+</p>
+ 
+<div id="slider-range"></div>
+<p>
+  <label for="amount">Price range:</label>
+  <input type="text" id="amount" readonly style="border:0; color:#f6931f; font-weight:bold;">
+</p>
+ 
+<div id="slider-range"></div>
+-->
 </body>
 </html>
